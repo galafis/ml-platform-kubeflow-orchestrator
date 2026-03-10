@@ -1,0 +1,94 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=ml_platform
+      - DATABASE_USER=ml_admin
+      - DATABASE_PASSWORD=changeme
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - model_artifacts:/app/artifacts
+      - model_registry:/app/model_registry
+    networks:
+      - ml-platform
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ml_platform
+      POSTGRES_USER: ml_admin
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ml_admin -d ml_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ml-platform
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.0
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://ml_admin:changeme@postgres:5432/ml_platform
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://ml_admin:changeme@postgres:5432/ml_platform
+      --default-artifact-root /mlflow/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - ml-platform
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+    networks:
+      - ml-platform
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ml-platform
+
+volumes:
+  postgres_data:
+  mlflow_artifacts:
+  model_artifacts:
+  model_registry:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  ml-platform:
+    driver: bridge

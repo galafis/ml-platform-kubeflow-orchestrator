@@ -1,0 +1,43 @@
+pipeline:
+  name: ml-training-pipeline
+  namespace: kubeflow
+  experiment_name: default-experiment
+  pipeline_root: gs://ml-platform-artifacts/pipelines
+  service_account: pipeline-runner
+  max_cache_staleness: P0D
+  enable_caching: true
+
+mlflow:
+  tracking_uri: http://mlflow:5000
+  registry_uri: http://mlflow:5000
+  artifact_location: gs://ml-platform-artifacts/mlflow
+  default_experiment: platform-experiments
+
+database:
+  host: localhost
+  port: 5432
+  database: ml_platform
+  user: ml_admin
+  password: changeme
+  pool_size: 10
+  max_overflow: 20
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+  reload: false
+  log_level: info
+
+monitoring:
+  enabled: true
+  port: 9090
+  push_gateway: http://prometheus-pushgateway:9091
+
+quality_gate:
+  min_accuracy: 0.85
+  min_precision: 0.80
+  min_recall: 0.80
+  min_f1_score: 0.82
+  max_latency_ms: 100.0
+  max_model_size_mb: 500.0

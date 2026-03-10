@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-platform-api
+  namespace: ml-platform
+  labels:
+    app: ml-platform-api
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ml-platform-api
+  template:
+    metadata:
+      labels:
+        app: ml-platform-api
+        component: api
+    spec:
+      serviceAccountName: ml-platform-sa
+      containers:
+        - name: api
+          image: ml-platform-api:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ml-platform-config
+                  key: database-host
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ml-platform-secrets
+                  key: database-password
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

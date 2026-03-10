@@ -1,0 +1,22 @@
+registry:
+  backend: local
+  path: ./model_registry
+
+  stages:
+    - development
+    - staging
+    - production
+    - archived
+
+  promotion_rules:
+    staging:
+      requires_quality_gate: true
+      auto_promote: false
+    production:
+      requires_quality_gate: true
+      requires_staging: true
+      auto_archive_previous: true
+
+  retention:
+    max_archived_versions: 10
+    cleanup_interval_hours: 24
